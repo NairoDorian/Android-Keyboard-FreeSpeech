@@ -44,10 +44,47 @@
     <!-- Must be fairly short -->
     <string name="action_emoji_search_for_emojis">Search</string>
 
+    <!-- For GIF menu action -->
+    <string name="action_gif_title">GIFs</string>
+    <string name="action_gif_search_placeholder">Search GIFs</string>
+    <string name="action_gif_no_results">No GIFs found</string>
+    <string name="action_gif_retry">Retry</string>
+    <string name="action_gif_error_generic">Something went wrong while loading GIFs.</string>
+    <string name="action_gif_download_failed">Could not download this GIF. Check your connection and try again.</string>
+    <string name="action_gif_insert_failed">This app does not support inserting GIFs.</string>
+    <string name="action_gif_no_api_key_title">Set up GIF search</string>
+    <string name="action_gif_no_api_key_subtitle">GIF search uses GIPHY and needs your own API key. Requests are only sent after you add one.</string>
+    <string name="action_gif_save_api_key">Save</string>
+    <string name="giphy_settings_api_key">GIPHY API key</string>
+    <string name="giphy_settings_api_key_subtitle">Required to search and send GIFs.</string>
+    <string name="giphy_settings_api_key_placeholder">Paste your GIPHY API key</string>
+    <string name="giphy_settings_api_key_help">Get a free key from developers.giphy.com. The key is stored only on this device and is sent directly to GIPHY when you search. No requests are made until a key is set.</string>
+
     <!-- For voice input action -->
     <string name="action_voice_input_title">Voice Input</string>
     <!-- Same as the one above but it uses the device's default system voice input instead of the built-in -->
     <string name="action_system_voice_input_title">Voice Input (System)</string>
+    <string name="action_system_voice_input_starting">Starting Offline Voice Input</string>
+    <string name="action_system_voice_input_listening">Offline Voice Input is listening</string>
+    <string name="action_system_voice_input_processing">Offline Voice Input is processing</string>
+    <string name="action_system_voice_input_completed">Offline Voice Input completed</string>
+    <string name="action_system_voice_input_failed">Offline Voice Input failed</string>
+    <string name="action_system_voice_input_futo_microphone_permission">Allow FUTO Keyboard microphone permission, then try again</string>
+    <string name="action_system_voice_input_offline_microphone_permission">Allow Offline Voice Input microphone permission, then try again</string>
+    <string name="action_system_voice_input_error_audio">Offline Voice Input could not open the microphone</string>
+    <string name="action_system_voice_input_error_client">Offline Voice Input service rejected the request</string>
+    <string name="action_system_voice_input_error_no_speech">Offline Voice Input did not detect speech</string>
+    <string name="action_system_voice_input_error_busy">Offline Voice Input is already busy</string>
+    <string name="action_system_voice_input_error_service">Offline Voice Input service or model failed</string>
+    <string name="action_system_voice_input_offline_unavailable">Offline Voice Input is unavailable; opening system voice input</string>
+    <string name="offline_voice_bridge_pairing_title">Allow Offline Voice Input?</string>
+    <string name="offline_voice_bridge_pairing_message">Allow Offline Voice Input to provide offline transcription to FUTO Keyboard? It can receive audio only while you use Voice Input. You can revoke this permission in Voice Input settings.</string>
+    <string name="offline_voice_bridge_pairing_allow">Allow</string>
+    <string name="offline_voice_bridge_pair">Pair Offline Voice Input</string>
+    <string name="offline_voice_bridge_pair_subtitle">Allow FUTO Keyboard to use Offline Voice Input for dictation</string>
+    <string name="offline_voice_bridge_pair_success">Offline Voice Input paired. Use FUTO Keyboard’s microphone to dictate.</string>
+    <string name="offline_voice_bridge_pair_failed">Could not pair with Offline Voice Input. Confirm it is installed, then try again.</string>
+    <string name="offline_voice_bridge_revoke">Revoke Offline Voice Input access</string>
     <string name="action_voice_input_no_model_for_language_x_installed">No voice input model installed for <xliff:g name="language" example="español">%s</xliff:g>, tap to check options?</string>
     <string name="action_voice_input_open_settings_button_to_grant_microphone_permission">Please go to Permissions, and enable Microphone permission to use voice input</string>
 
@@ -545,6 +582,7 @@
     <string name="swipe_settings_sensitive_swipe">Increase sensitivity</string>
     <string name="swipe_settings_sensitive_swipe_subtitle">Make swipe trigger more often</string>
 
+
     <string name="swipe_settings_kasroz">KASROZ</string>
     <string name="swipe_settings_kasroz_subtitle">The best keyboard layout to swipe</string>
 
@@ -561,6 +599,15 @@
 
     <string name="swipe_settings_configure_shortcuts">Shortcuts</string>
     <string name="swipe_settings_configure_shortcuts_subtitle">Configure spacebar and delete key gestures in long-press settings</string>
+
+    <string name="swipe_settings_surface_swipe_delete">Swipe to delete words</string>
+    <string name="swipe_settings_surface_swipe_delete_subtitle">Swipe left on the keyboard to delete the previous word. Keep holding after the swipe and move left or right to select more or fewer words before releasing.</string>
+    <string name="swipe_settings_surface_swipe_recapitalize">Swipe up to recapitalize</string>
+    <string name="swipe_settings_surface_swipe_recapitalize_subtitle">Swipe up from a letter key to cycle the capitalization of the previous word.</string>
+    <string name="swipe_settings_surface_swipe_right_recapitalize">Swipe right to recapitalize</string>
+    <string name="swipe_settings_surface_swipe_right_recapitalize_subtitle">Swipe right from a letter key to cycle the capitalization of the previous word.</string>
+    <string name="swipe_settings_hold_shift_recapitalize">Hold Shift to recapitalize</string>
+    <string name="swipe_settings_hold_shift_recapitalize_subtitle">Hold Shift to cycle the capitalization of the previous word instead of enabling Caps Lock.</string>
 
     <string name="swipe_settings_show_unsupported">Show unsupported settings…</string>
     <string name="swipe_settings_use_old_swipe">Use legacy swipe algorithm</string>

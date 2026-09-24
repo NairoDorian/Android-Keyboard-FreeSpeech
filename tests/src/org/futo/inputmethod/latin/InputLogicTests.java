@@ -216,6 +216,52 @@ public class InputLogicTests extends InputTestsBase {
                 mEditText.getText().toString());
     }
 
+    public void testShiftDoesNotRecapitalizeCurrentWord() {
+        final String WORD_TO_TYPE = "camelCase";
+        type(WORD_TO_TYPE);
+        type(Constants.CODE_SHIFT);
+        assertEquals("shift should leave the current word unchanged", WORD_TO_TYPE,
+                mEditText.getText().toString());
+    }
+
+    public void testRecapitalizeThenSpaceDoesNotAutoCorrect() {
+        final String WORD_TO_TYPE = "tgis";
+        final String EXPECTED_AFTER_RECAP = "Tgis";
+        final String EXPECTED_RESULT = "Tgis ";
+        type(WORD_TO_TYPE);
+        type(Constants.CODE_RECAPITALIZE);
+        assertEquals("recapitalize action should recapitalize the word",
+                EXPECTED_AFTER_RECAP, mEditText.getText().toString());
+        type(Constants.CODE_SPACE);
+        assertEquals("space should commit the recapitalized word, not a stale auto-correction",
+                EXPECTED_RESULT, mEditText.getText().toString());
+    }
+
+    public void testRecapitalizeSwipeCyclingThenSpace() {
+        final String WORD_TO_TYPE = "tgis";
+        type(WORD_TO_TYPE);
+        type(Constants.CODE_RECAPITALIZE);
+        assertEquals("first recapitalize action should recapitalize the word at the cursor",
+                "Tgis", mEditText.getText().toString());
+        type(Constants.CODE_RECAPITALIZE);
+        assertEquals("second recapitalize action should cycle the selected word's case",
+                "TGIS", mEditText.getText().toString());
+        type(Constants.CODE_SPACE);
+        assertEquals("space should commit the cycled recapitalized word",
+                "TGIS ", mEditText.getText().toString());
+    }
+
+    public void testRecapitalizeThenPunctuation() {
+        final String WORD_TO_TYPE = "tgis";
+        type(WORD_TO_TYPE);
+        type(Constants.CODE_RECAPITALIZE);
+        assertEquals("recapitalize action should recapitalize the word",
+                "Tgis", mEditText.getText().toString());
+        type(Constants.CODE_PERIOD);
+        assertEquals("punctuation should commit the recapitalized word",
+                "Tgis.", mEditText.getText().toString());
+    }
+
     public void testDoubleSpace() {
         // U+1F607 is an emoji
         final String[] STRINGS_TO_TYPE =

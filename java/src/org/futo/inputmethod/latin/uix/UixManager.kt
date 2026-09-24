@@ -127,6 +127,7 @@ import org.futo.inputmethod.latin.uix.actions.BugViewerAction
 import org.futo.inputmethod.latin.uix.actions.BugViewerState
 import org.futo.inputmethod.latin.uix.actions.KeyboardModeAction
 import org.futo.inputmethod.latin.uix.actions.PersistentEmojiState
+import org.futo.inputmethod.latin.uix.actions.SystemVoiceInputAction
 import org.futo.inputmethod.latin.uix.actions.keyCode
 import org.futo.inputmethod.latin.uix.actions.keyCodeAlt
 import org.futo.inputmethod.latin.uix.resizing.KeyboardResizers
@@ -655,6 +656,10 @@ class UixManager(private val latinIME: LatinIME) {
             rawAction
         else
             ActionRegistry.getActionOverride(latinIME, rawAction)
+
+        if (action == SystemVoiceInputAction && persistentStates[action] == null) {
+            persistentStates[action] = action.persistentState?.invoke(keyboardManagerForAction)
+        }
 
         if (action.windowImpl != null) {
             enterActionWindowView(action)
