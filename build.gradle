@@ -474,5 +474,21 @@ dependencies {
     androidTestImplementation 'androidx.annotation:annotation:1.0.0'
 }
 
+// On Windows, aidl.exe writes the command line into the generated Java file header comment.
+// When the flavor is 'unstable', '\unstable' is treated by javac as an invalid Unicode escape sequence '\u'.
+tasks.withType(JavaCompile).configureEach { javaCompileTask ->
+    doFirst {
+        def aidlOutDir = file("${project.buildDir}/generated/aidl_source_output_dir")
+        if (aidlOutDir.exists()) {
+            fileTree(dir: aidlOutDir, include: '**/*.java').each { f ->
+                def text = f.getText('UTF-8')
+                if (text.contains('\\unstable')) {
+                    f.setText(text.replace('\\unstable', '/unstable'), 'UTF-8')
+                }
+            }
+        }
+    }
+}
+
 project.logger.lifecycle("versionCode = ${android.defaultConfig.versionCode}")
 project.logger.lifecycle("versionName = ${android.defaultConfig.versionName}")

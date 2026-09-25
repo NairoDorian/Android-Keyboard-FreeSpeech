@@ -73,7 +73,7 @@ object ActionRegistry {
     fun getActionOverride(context: Context, action: Action): Action {
         return if(action == VoiceInputAction || action == SystemVoiceInputAction) {
             val useSystemVoiceInput = context.getSetting(USE_SYSTEM_VOICE_INPUT)
-            if(useSystemVoiceInput) {
+            if(useSystemVoiceInput || OfflineVoiceBridgePairing.capability(context) != null) {
                 SystemVoiceInputAction
             } else {
                 VoiceInputAction
