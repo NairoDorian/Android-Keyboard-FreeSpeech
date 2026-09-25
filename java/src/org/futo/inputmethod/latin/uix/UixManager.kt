@@ -662,7 +662,12 @@ class UixManager(private val latinIME: LatinIME) {
         }
 
         if (action.windowImpl != null) {
-            enterActionWindowView(action)
+            // If this action's window is already open, use simplePressImpl to toggle
+            if (currWindowAction.value == action && action.simplePressImpl != null) {
+                action.simplePressImpl.invoke(keyboardManagerForAction, persistentStates[action])
+            } else {
+                enterActionWindowView(action)
+            }
         } else if (action.simplePressImpl != null) {
             action.simplePressImpl.invoke(keyboardManagerForAction, persistentStates[action])
         } else {

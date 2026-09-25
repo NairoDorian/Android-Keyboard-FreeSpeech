@@ -12,15 +12,22 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
@@ -78,11 +85,14 @@ private val OfflineVoiceBridgeService = ComponentName(
 private class SystemVoiceInputPersistentState(
     private val manager: KeyboardManagerForAction
 ) : PersistentActionState {
-    private enum class State { Idle, Starting, Listening, Processing, Stopping }
+    enum class State { Idle, Starting, Listening, Processing, Stopping }
 
     private val context = manager.getContext()
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var state = State.Idle
+    val composableState: MutableState<State> = mutableStateOf(State.Idle)
+    private var state: State
+        get() = composableState.value
+        set(value) { composableState.value = value }
     private var bridge: IOfflineVoiceBridge? = null
     private var bound = false
     private var bridgeSessionStarted = false
@@ -357,14 +367,151 @@ private class SystemVoiceInputPersistentState(
 private const val BRIDGE_STATE_LISTENING = 2
 private const val BRIDGE_STATE_PROCESSING = 3
 
+private class SystemVoiceInputActionWindow(
+    val manager: KeyboardManagerForAction,
+    val persistentState: SystemVoiceInputPersistentState
+) : ActionWindow() {
+
+    override val onlyShowAboveKeyboard: Boolean get() = true
+    override val showCloseButton: Boolean get() = false
+
+    @Composable
+    override fun windowName(): String {
+        return stringResource(R.string.action_system_voice_input_title)
+    }
+
+    @Composable
+    override fun WindowContents(keyboardShown: Boolean) {
+        val currentState = persistentState.composableState.value
+
+        // Auto-close the window when state returns to Idle (session completed/failed)
+        LaunchedEffect(currentState) {
+            if (currentState == SystemVoiceInputPersistentState.State.Idle) {
+                // Small delay so the user can briefly see the final status
+                kotlinx.coroutines.delay(600L)
+                if (persistentState.composableState.value == SystemVoiceInputPersistentState.State.Idle) {
+                    manager.closeActionWindow()
+                }
+            }
+        }
+
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                enabled = true,
+                onClickLabel = null,
+                onClick = { persistentState.toggle() },
+                role = null,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() })
+            .semantics(mergeDescendants = true) {
+                traversalIndex = -1.0f
+            }
+        ) {
+            Box(modifier = Modifier.align(Alignment.Center)) {
+                SystemVoiceInputContent(currentState)
+            }
+        }
+    }
+
+    override fun close(): CloseResult {
+        // If still actively recording, stop the session before closing
+        val s = persistentState.composableState.value
+        if (s == SystemVoiceInputPersistentState.State.Listening ||
+            s == SystemVoiceInputPersistentState.State.Starting) {
+            persistentState.toggle()
+        }
+        return CloseResult.Default
+    }
+}
+
+@Composable
+private fun SystemVoiceInputContent(state: SystemVoiceInputPersistentState.State) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        // Animated pulsing circle (only visible while listening)
+        if (state == SystemVoiceInputPersistentState.State.Listening) {
+            val magnitude = remember { androidx.compose.runtime.mutableFloatStateOf(0.5f) }
+            // Simple pulsing animation
+            LaunchedEffect(Unit) {
+                var t = 0f
+                while (true) {
+                    magnitude.floatValue = 0.3f + 0.4f * kotlin.math.sin(t).toFloat().let { (it + 1f) / 2f }
+                    t += 0.08f
+                    kotlinx.coroutines.delay(32L)
+                }
+            }
+            org.futo.voiceinput.shared.ui.AnimatedRecognizeCircle(magnitude = magnitude)
+        }
+
+        // Mic icon
+        val iconColor = when (state) {
+            SystemVoiceInputPersistentState.State.Listening ->
+                MaterialTheme.colorScheme.onPrimaryContainer
+            SystemVoiceInputPersistentState.State.Processing,
+            SystemVoiceInputPersistentState.State.Stopping ->
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            else -> MaterialTheme.colorScheme.onSurface
+        }
+        Icon(
+            painter = painterResource(R.drawable.mic_fill),
+            contentDescription = stringResource(R.string.action_system_voice_input_title),
+            modifier = Modifier.size(48.dp),
+            tint = iconColor
+        )
+
+        // Status text
+        val statusText = when (state) {
+            SystemVoiceInputPersistentState.State.Starting ->
+                stringResource(R.string.action_system_voice_input_starting)
+            SystemVoiceInputPersistentState.State.Listening ->
+                stringResource(R.string.action_system_voice_input_listening)
+            SystemVoiceInputPersistentState.State.Processing,
+            SystemVoiceInputPersistentState.State.Stopping ->
+                stringResource(R.string.action_system_voice_input_processing)
+            SystemVoiceInputPersistentState.State.Idle ->
+                stringResource(R.string.action_system_voice_input_completed)
+        }
+        Text(
+            statusText,
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(x = 0.dp, y = 48.dp),
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        // Show a progress spinner when processing
+        if (state == SystemVoiceInputPersistentState.State.Processing ||
+            state == SystemVoiceInputPersistentState.State.Stopping ||
+            state == SystemVoiceInputPersistentState.State.Starting) {
+            androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp)
+                    .size(24.dp),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 2.dp
+            )
+        }
+    }
+}
+
 val SystemVoiceInputAction = Action(
     icon = R.drawable.mic_fill,
     name = R.string.action_system_voice_input_title,
+    keepScreenAwake = true,
     simplePressImpl = { _, state ->
         (state as SystemVoiceInputPersistentState).toggle()
     },
     persistentState = { SystemVoiceInputPersistentState(it) },
-    windowImpl = null,
+    windowImpl = { manager, state ->
+        val ps = state as SystemVoiceInputPersistentState
+        // Auto-start the session when the window opens (if idle)
+        if (ps.composableState.value == SystemVoiceInputPersistentState.State.Idle) {
+            ps.toggle()
+        }
+        SystemVoiceInputActionWindow(manager, ps)
+    },
     shownInEditor = false
 )
 
