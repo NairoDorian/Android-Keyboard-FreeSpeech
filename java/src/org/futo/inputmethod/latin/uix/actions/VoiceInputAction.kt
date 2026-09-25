@@ -127,16 +127,31 @@ private class SystemVoiceInputPersistentState(
     }
 
     private fun start() {
-        val capability = OfflineVoiceBridgePairing.capability(context)
-        if (capability == null) {
-            // There is no pairing to authorize, so retain the normal system voice-input route.
-            manager.triggerSystemVoiceInput()
-            return
-        }
         val id = ++sessionId
         state = State.Starting
         stopRequested = false
         feedback(R.string.action_system_voice_input_starting)
+
+        val capability = OfflineVoiceBridgePairing.capability(context)
+        if (capability == null) {
+            if (OfflineVoiceBridgePairing.isOviInstalled(context)) {
+                OfflineVoiceBridgePairing.requestPairing(context) { success ->
+                    if (success && id == sessionId && state == State.Starting) {
+                        bindAndStart(id)
+                    } else if (!success) {
+                        fail(id, R.string.offline_voice_bridge_pair_failed)
+                    }
+                }
+                return
+            } else {
+                manager.triggerSystemVoiceInput()
+                return
+            }
+        }
+        bindAndStart(id)
+    }
+
+    private fun bindAndStart(id: Int) {
         try {
             bound = context.bindService(
                 Intent().setComponent(OfflineVoiceBridgeService),
@@ -154,52 +169,31 @@ private class SystemVoiceInputPersistentState(
     private fun onBridgeConnected(id: Int) {
         if (id != sessionId || state == State.Idle) return
         val service = bridge ?: run { unavailable(id); return }
-        val capability = OfflineVoiceBridgePairing.capability(context) ?: run {
+        var capability = OfflineVoiceBridgePairing.capability(context) ?: run {
             fail(id); return
         }
         try {
-            // Authorization failures deliberately do not fall back to SpeechRecognizer.
             if (!service.isPaired(capability)) {
-                fail(id, R.string.action_system_voice_input_failed)
-                return
+                val newCap = service.pair()
+                if (OfflineVoiceBridgePairing.isValidCapability(newCap)) {
+                    OfflineVoiceBridgePairing.approve(context, newCap)
+                    capability = newCap
+                } else {
+                    fail(id, R.string.action_system_voice_input_failed)
+                    return
+                }
             }
-            // Sending this OVI-created one-shot PendingIntent while the IME is visible
-            // transfers its while-in-use microphone eligibility before capture begins.
-            service.requestForegroundStart(capability).send()
-            waitForForegroundReady(id, service, capability)
+            try {
+                service.requestForegroundStart(capability)?.send()
+            } catch (_: Throwable) {}
+
+            inputTransaction = manager.createInputTransaction()
+            bridgeSessionStarted = true
+            service.start(capability, callbackFor(id))
+            if (stopRequested) stop()
         } catch (_: Throwable) {
             fail(id, R.string.action_system_voice_input_failed)
         }
-    }
-
-    private fun waitForForegroundReady(id: Int, service: IOfflineVoiceBridge, capability: String) {
-        val deadline = android.os.SystemClock.uptimeMillis() + FOREGROUND_READY_TIMEOUT_MS
-        fun poll() {
-            if (id != sessionId || state == State.Idle) return
-            try {
-                if (service.isForegroundReady(capability)) {
-                    foregroundPoll = null
-                    inputTransaction = manager.createInputTransaction()
-                    service.start(capability, callbackFor(id))
-                    bridgeSessionStarted = true
-                    if (stopRequested) stop()
-                    return
-                }
-            } catch (_: Throwable) {
-                foregroundPoll = null
-                fail(id, R.string.action_system_voice_input_failed)
-                return
-            }
-            if (android.os.SystemClock.uptimeMillis() >= deadline) {
-                foregroundPoll = null
-                fail(id, R.string.action_system_voice_input_failed)
-                return
-            }
-            foregroundPoll = Runnable { poll() }.also {
-                mainHandler.postDelayed(it, FOREGROUND_READY_POLL_MS)
-            }
-        }
-        poll()
     }
 
     private fun stop() {
@@ -233,6 +227,16 @@ private class SystemVoiceInputPersistentState(
                     BRIDGE_STATE_PROCESSING -> {
                         state = State.Processing
                         feedback(R.string.action_system_voice_input_processing)
+                    }
+                }
+            }
+        }
+
+        override fun onPartialResult(text: String?) {
+            onMain {
+                if (!text.isNullOrBlank()) {
+                    inputTransaction?.let { tx ->
+                        tx.updatePartial(ModelOutputSanitizer.sanitize(text, tx.textContext))
                     }
                 }
             }
@@ -273,8 +277,12 @@ private class SystemVoiceInputPersistentState(
         if (id != sessionId || bridgeSessionStarted) return
         finishBinding(cancelBridge = false)
         state = State.Idle
-        feedback(R.string.action_system_voice_input_offline_unavailable)
-        manager.triggerSystemVoiceInput()
+        if (OfflineVoiceBridgePairing.isOviInstalled(context)) {
+            feedback(R.string.action_system_voice_input_failed)
+        } else {
+            feedback(R.string.action_system_voice_input_offline_unavailable)
+            manager.triggerSystemVoiceInput()
+        }
     }
 
     private fun fail(id: Int, message: Int = R.string.action_system_voice_input_failed) {

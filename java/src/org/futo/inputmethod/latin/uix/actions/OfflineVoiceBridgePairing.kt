@@ -36,22 +36,21 @@ object OfflineVoiceBridgePairing {
     internal fun isValidCapability(value: String?): Boolean =
         value != null && capabilityPattern.matches(value)
 
+    fun isOviInstalled(context: Context): Boolean = try {
+        context.packageManager.getPackageInfo(OVI_PACKAGE, 0) != null
+    } catch (_: Throwable) {
+        false
+    }
+
     /**
-     * Android does not consistently preserve activity caller metadata for this cross-app
-     * result hand-off. The random capability is instead the pairing authority: a caller
-     * that did not obtain it from OVI cannot later use OVI's Binder endpoint. Referrer is
-     * optional because Samsung may strip it before delivery.
+     * The random capability is the pairing authority: a caller that did not
+     * obtain it from OVI cannot later use OVI's Binder endpoint.
      */
     internal fun isExpectedPairingIntent(intent: Intent?): Boolean = try {
-        if (intent == null || intent.action != PAIR_ACTION ||
-            !intent.categories.isNullOrEmpty() || intent.data != null || intent.clipData != null ||
-            intent.type != null
-        ) false else {
-            val extras = intent.extras
-            extras != null && extras.keySet().all {
-                it == EXTRA_CAPABILITY || it == Intent.EXTRA_REFERRER
-            } &&
-                isValidCapability(intent.getStringExtra(EXTRA_CAPABILITY))
+        if (intent == null || intent.action != PAIR_ACTION) {
+            false
+        } else {
+            isValidCapability(intent.getStringExtra(EXTRA_CAPABILITY))
         }
     } catch (_: Throwable) {
         false
